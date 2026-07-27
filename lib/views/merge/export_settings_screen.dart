@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/pdf_provider.dart';
 import '../../utils/pdf_helper.dart';
-import 'package:printing/printing.dart';
 import '../../widgets/loading_overlay.dart';
 
 class ExportSettingsScreen extends StatefulWidget {
@@ -129,7 +128,7 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
       );
 
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Document' : _nameController.text;
-      await Printing.sharePdf(bytes: pdfBytes, filename: '$filename.pdf');
+      PdfHelper.downloadPdf(pdfBytes, '$filename.pdf');
       
       if (mounted) {
         // نغلق نافذة التحميل أولاً

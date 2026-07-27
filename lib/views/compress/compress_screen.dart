@@ -3,7 +3,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:pdfx/pdfx.dart';
 import 'dart:typed_data';
 import '../../utils/pdf_helper.dart';
-import 'package:printing/printing.dart';
 import '../../widgets/loading_overlay.dart';
 
 class CompressScreen extends StatefulWidget {
@@ -95,8 +94,7 @@ class _CompressScreenState extends State<CompressScreen> {
       
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Compressed' : _nameController.text;
       
-      // Share/Save the file
-      await Printing.sharePdf(bytes: compressedPdf, filename: '$filename.pdf');
+      PdfHelper.downloadPdf(compressedPdf, '$filename.pdf');
       
       if (mounted) {
         LoadingDialog.hide(context);
