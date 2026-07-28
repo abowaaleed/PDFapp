@@ -20,7 +20,7 @@ class HomeScreen extends StatelessWidget {
             Text('PDF-sw411',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('v1.0.9',
+            Text('v1.1.0',
                 style: TextStyle(
                     fontSize: 10, fontWeight: FontWeight.normal)),
           ],
