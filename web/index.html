@@ -55,27 +55,8 @@
 
   <script>
     window.PDFUtils = {
-      isArabic: function(s) {
-        return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s);
-      },
-      reverseStr: function(s) {
-        return Array.from(s).reverse().join('');
-      },
-      sortItemsInLine: function(items) {
-        if (items.length === 0) return '';
-        var hasArabic = items.some(function(it) { return PDFUtils.isArabic(it.str); });
-        items.sort(function(a, b) {
-          if (hasArabic) return b.transform[4] - a.transform[4];
-          return a.transform[4] - b.transform[4];
-        });
-        return items.map(function(it) {
-          var s = it.str;
-          if (PDFUtils.isArabic(s)) s = PDFUtils.reverseStr(s);
-          return s;
-        }).join(' ');
-      },
       extractText: async function(data) {
-        var pdf, page, tc, text, texts, i, lines, items, j, item;
+        var pdf, page, tc, text, texts, i, lines, items, j, item, lineY, k;
         try {
           pdf = await pdfjsLib.getDocument({data: data}).promise;
         } catch (e) {
@@ -92,16 +73,20 @@
               item = items[j];
               if (!item.str) continue;
               var added = false;
-              for (var k = 0; k < lines.length; k++) {
-                if (Math.abs(lines[k][0].transform[5] - item.transform[5]) < 5) {
-                  lines[k].push(item);
+              for (k = 0; k < lines.length; k++) {
+                lineY = lines[k].items[0].transform[5];
+                if (Math.abs(lineY - item.transform[5]) < 5) {
+                  lines[k].items.push(item);
                   added = true;
                   break;
                 }
               }
-              if (!added) lines.push([item]);
+              if (!added) lines.push({y: item.transform[5], items: [item]});
             }
-            text = lines.map(PDFUtils.sortItemsInLine).join('\n');
+            lines.sort(function(a, b) { return b.y - a.y; });
+            text = lines.map(function(line) {
+              return line.items.map(function(it) { return it.str; }).join(' ');
+            }).join('\n');
             texts.push(text);
           } catch (e) {
             texts.push('');
