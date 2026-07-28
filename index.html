@@ -58,16 +58,21 @@
       isArabic: function(s) {
         return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s);
       },
+      reverseStr: function(s) {
+        return Array.from(s).reverse().join('');
+      },
       sortItemsInLine: function(items) {
         if (items.length === 0) return '';
         var hasArabic = items.some(function(it) { return PDFUtils.isArabic(it.str); });
         items.sort(function(a, b) {
-          var dy = a.transform[5] - b.transform[5];
-          if (Math.abs(dy) > 2) return dy;
           if (hasArabic) return b.transform[4] - a.transform[4];
           return a.transform[4] - b.transform[4];
         });
-        return items.map(function(it) { return it.str; }).join(' ');
+        return items.map(function(it) {
+          var s = it.str;
+          if (PDFUtils.isArabic(s)) s = PDFUtils.reverseStr(s);
+          return s;
+        }).join(' ');
       },
       extractText: async function(data) {
         var pdf, page, tc, text, texts, i, lines, items, j, item;
