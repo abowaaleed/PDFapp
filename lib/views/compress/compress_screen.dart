@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import '../../providers/saved_provider.dart';
@@ -47,7 +48,6 @@ class _CompressScreenState extends State<CompressScreen> {
   Future<void> _compressPdf() async {
     if (_originalPdfBytes == null) return;
     
-    // إظهار الروح (التحميل) فوراً
     LoadingDialog.show(context, 'Compressing PDF');
     await Future.delayed(const Duration(milliseconds: 500));
 
@@ -95,19 +95,20 @@ class _CompressScreenState extends State<CompressScreen> {
       );
       
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Compressed' : _nameController.text;
-      
-      PdfHelper.downloadPdf(compressedPdf, '$filename.pdf');
+      final fullFilename = '$filename.pdf';
 
       if (context.mounted) {
         final savedProvider = Provider.of<SavedProvider>(context, listen: false);
-        await savedProvider.save(
-          '$filename.pdf',
-          compressedPdf,
-        );
+        await savedProvider.save(fullFilename, compressedPdf);
       }
 
       if (mounted) {
         LoadingDialog.hide(context);
+      }
+
+      await Printing.sharePdf(bytes: compressedPdf, filename: fullFilename);
+
+      if (mounted) {
         _showResultDialog(_originalSize!, compressedPdf.length);
       }
     } catch (e) {

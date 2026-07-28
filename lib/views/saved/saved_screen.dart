@@ -1,9 +1,7 @@
-import 'dart:html' as html;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../providers/saved_provider.dart';
-import '../../utils/pdf_helper.dart';
 
 class SavedScreen extends StatelessWidget {
   const SavedScreen({super.key});
@@ -103,14 +101,6 @@ class _SavedCard extends StatelessWidget {
                   dense: true,
                   contentPadding: EdgeInsets.zero),
             ),
-            const PopupMenuItem(
-              value: 'share',
-              child: ListTile(
-                  leading: Icon(Icons.share_rounded),
-                  title: Text('مشاركة'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero),
-            ),
             const PopupMenuDivider(),
             const PopupMenuItem(
               value: 'delete',
@@ -133,39 +123,21 @@ class _SavedCard extends StatelessWidget {
 
     switch (action) {
       case 'download':
-        PdfHelper.downloadPdf(bytes, '${item.name}.pdf');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('جاري التحميل...'),
-                duration: Duration(seconds: 1)),
-          );
+        try {
+          await Printing.sharePdf(
+              bytes: bytes, filename: '${item.name}.pdf');
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('حدث خطأ: $e')),
+            );
+          }
         }
-        break;
-      case 'share':
-        await _share(bytes, '${item.name}.pdf', context);
         break;
       case 'delete':
         _confirmDelete(context, provider);
         break;
     }
-  }
-
-  Future<void> _share(
-      Uint8List bytes, String filename, BuildContext context) async {
-    try {
-      if (html.window.navigator.share != null) {
-        final blob = html.Blob([bytes], 'application/pdf');
-        final file =
-            html.File([blob], filename, {'type': 'application/pdf'});
-        await html.window.navigator.share({
-          'files': [file],
-          'title': filename,
-        });
-        return;
-      }
-    } catch (_) {}
-    PdfHelper.downloadPdf(bytes, filename);
   }
 
   void _confirmDelete(BuildContext context, SavedProvider provider) {

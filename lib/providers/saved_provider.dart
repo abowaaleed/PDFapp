@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -15,132 +16,128 @@ class SavedItem {
     required this.date,
     required this.size,
   });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'name': name,
+        'date': date.toIso8601String(),
+        'size': size,
+      };
+
+  factory SavedItem.fromMap(Map<String, dynamic> m) => SavedItem(
+        id: m['id'] as String,
+        name: m['name'] as String,
+        date: DateTime.parse(m['date'] as String),
+        size: m['size'] as int,
+      );
 }
 
 class SavedProvider with ChangeNotifier {
+  static const _storageKey = 'pdf_sw411_saved';
+  static const _bytesKey = 'pdf_sw411_bytes';
   List<SavedItem> _items = [];
-  dynamic _db;
   bool _isReady = false;
 
   List<SavedItem> get items => List.unmodifiable(_items);
   bool get isReady => _isReady;
 
   Future<void> init() async {
+    _loadItems();
+    _isReady = true;
+    notifyListeners();
+  }
+
+  List<Map<String, dynamic>> _getStoredList() {
     try {
-      final completer = Completer<void>();
-      final request = html.window.indexedDB!.open(
-        'pdf_sw411_saved',
-        version: 1,
-        onUpgradeNeeded: (e) {
-          final req = (e.target as dynamic);
-          final db = req.result;
-          if (!(db.objectStoreNames as dynamic).contains('pdfs')) {
-            db.createObjectStore('pdfs', keyPath: 'id');
-          }
-        },
-      );
-
-      (request as dynamic).onSuccess.listen((_) {
-        _db = (request as dynamic).result;
-        if (!completer.isCompleted) completer.complete();
-      });
-
-      (request as dynamic).onError.listen((_) {
-        if (!completer.isCompleted) {
-          completer.completeError('IndexedDB not available');
-        }
-      });
-
-      await completer.future;
-      await _loadItems();
-      _isReady = true;
-      notifyListeners();
+      final json = html.window.localStorage[_storageKey];
+      if (json == null || json.isEmpty) return [];
+      final List data = jsonDecode(json);
+      return data.cast<Map<String, dynamic>>();
     } catch (e) {
-      debugPrint('SavedProvider init: $e');
-      _isReady = true;
-      notifyListeners();
+      debugPrint('_getStoredList: $e');
+      return [];
     }
   }
 
-  Future<void> _loadItems() async {
-    if (_db == null) return;
+  Map<String, String> _getStoredBytes() {
     try {
-      final tx = _db.transaction('pdfs', 'readonly');
-      final store = tx.objectStore('pdfs');
-      final request = store.getAll();
-
-      final completer = Completer<List<SavedItem>>();
-      request.onSuccess.listen((_) {
-        final List raw = (request.result as List?) ?? [];
-        final list = raw.map((e) {
-          final m = Map<String, dynamic>.from(e as Map);
-          return SavedItem(
-            id: m['id'] as String,
-            name: m['name'] as String,
-            date: DateTime.parse(m['date'] as String),
-            size: m['size'] as int,
-          );
-        }).toList();
-        list.sort((a, b) => b.date.compareTo(a.date));
-        completer.complete(list);
-      });
-      request.onError.listen((_) => completer.complete([]));
-
-      _items = await completer.future;
+      final json = html.window.localStorage[_bytesKey];
+      if (json == null || json.isEmpty) return {};
+      final Map data = jsonDecode(json);
+      return data.cast<String, String>();
     } catch (e) {
-      debugPrint('_loadItems: $e');
+      debugPrint('_getStoredBytes: $e');
+      return {};
     }
+  }
+
+  void _saveBytesMap(Map<String, String> bytesMap) {
+    try {
+      html.window.localStorage[_bytesKey] = jsonEncode(bytesMap);
+    } catch (e) {
+      debugPrint('_saveBytesMap: $e');
+    }
+  }
+
+  void _loadItems() {
+    final stored = _getStoredList();
+    _items = stored.map((e) => SavedItem.fromMap(e)).toList();
+    _items.sort((a, b) => b.date.compareTo(a.date));
   }
 
   Future<void> save(String name, Uint8List bytes) async {
-    if (_db == null) return;
     try {
       final id = DateTime.now().millisecondsSinceEpoch.toString();
-      final tx = _db.transaction('pdfs', 'readwrite');
-      final store = tx.objectStore('pdfs');
-      store.put({
-        'id': id,
-        'name': name,
-        'bytes': bytes,
-        'date': DateTime.now().toIso8601String(),
-        'size': bytes.length,
-      });
-      await _loadItems();
+      final item = SavedItem(
+        id: id,
+        name: name,
+        date: DateTime.now(),
+        size: bytes.length,
+      );
+
+      final list = _getStoredList();
+      list.insert(0, item.toMap());
+
+      final bytesMap = _getStoredBytes();
+      bytesMap[id] = base64Encode(bytes);
+
+      _saveBytesMap(bytesMap);
+
+      html.window.localStorage[_storageKey] = jsonEncode(list);
+
+      _loadItems();
       notifyListeners();
     } catch (e) {
-      debugPrint('save: $e');
+      debugPrint('SavedProvider.save: $e');
     }
   }
 
   Future<Uint8List?> getBytes(String id) async {
-    if (_db == null) return null;
     try {
-      final tx = _db.transaction('pdfs', 'readonly');
-      final store = tx.objectStore('pdfs');
-      final request = store.getObject(id);
-
-      final completer = Completer<Uint8List?>();
-      request.onSuccess.listen((_) {
-        final r = request.result as Map?;
-        completer.complete(r != null ? r['bytes'] as Uint8List : null);
-      });
-      request.onError.listen((_) => completer.complete(null));
-      return completer.future;
+      final bytesMap = _getStoredBytes();
+      final b64 = bytesMap[id];
+      if (b64 == null) return null;
+      return base64Decode(b64);
     } catch (e) {
+      debugPrint('SavedProvider.getBytes: $e');
       return null;
     }
   }
 
   Future<void> remove(String id) async {
-    if (_db == null) return;
     try {
-      final tx = _db.transaction('pdfs', 'readwrite');
-      final store = tx.objectStore('pdfs');
-      store.delete(id);
-      await _loadItems();
+      final list = _getStoredList();
+      list.removeWhere((e) => e['id'] == id);
+      html.window.localStorage[_storageKey] = jsonEncode(list);
+
+      final bytesMap = _getStoredBytes();
+      bytesMap.remove(id);
+      _saveBytesMap(bytesMap);
+
+      _loadItems();
       notifyListeners();
     } catch (e) {
-      debugPrint('remove: $e');
+      debugPrint('SavedProvider.remove: $e');
     }
   }
 }

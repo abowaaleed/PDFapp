@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../providers/pdf_provider.dart';
 import '../../providers/saved_provider.dart';
@@ -129,18 +130,20 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
       );
 
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Document' : _nameController.text;
-      PdfHelper.downloadPdf(pdfBytes, '$filename.pdf');
 
       if (context.mounted) {
         final savedProvider = Provider.of<SavedProvider>(context, listen: false);
-        await savedProvider.save(
-          '$filename.pdf',
-          pdfBytes,
-        );
+        await savedProvider.save('$filename.pdf', pdfBytes);
       }
 
       if (mounted) {
         LoadingDialog.hide(context);
+      }
+
+      final fullFilename = '$filename.pdf';
+      await Printing.sharePdf(bytes: pdfBytes, filename: fullFilename);
+
+      if (mounted) {
         _showSuccessDialog(imagesCount, pdfBytes.length);
       }
     } catch (e) {

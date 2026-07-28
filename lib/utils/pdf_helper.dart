@@ -1,4 +1,3 @@
-import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -150,15 +149,5 @@ class PdfHelper {
         images.fold(0.0, (sum, item) => sum + item.length);
     double estimatedSize = totalOriginalSize * (0.02 + (quality * 0.4));
     return estimatedSize / 1024;
-  }
-
-  static void downloadPdf(Uint8List bytes, String filename) {
-    final blob = html.Blob([bytes], 'application/pdf');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    html.AnchorElement(href: url)
-      ..setAttribute(
-          'download', filename.endsWith('.pdf') ? filename : '$filename.pdf')
-      ..click();
-    html.Url.revokeObjectUrl(url);
   }
 }
