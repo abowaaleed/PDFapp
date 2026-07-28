@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../providers/saved_provider.dart';
+import '../../utils/pdf_helper.dart';
 
 class SavedScreen extends StatelessWidget {
   const SavedScreen({super.key});
@@ -94,10 +94,18 @@ class _SavedCard extends StatelessWidget {
               _handleAction(context, provider, value),
           itemBuilder: (_) => [
             const PopupMenuItem(
-              value: 'download',
+              value: 'open',
               child: ListTile(
-                  leading: Icon(Icons.download_rounded),
-                  title: Text('تحميل'),
+                  leading: Icon(Icons.open_in_new),
+                  title: Text('فتح الملف'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero),
+            ),
+            const PopupMenuItem(
+              value: 'share',
+              child: ListTile(
+                  leading: Icon(Icons.share_rounded),
+                  title: Text('مشاركة'),
                   dense: true,
                   contentPadding: EdgeInsets.zero),
             ),
@@ -122,17 +130,11 @@ class _SavedCard extends StatelessWidget {
     if (bytes == null || !context.mounted) return;
 
     switch (action) {
-      case 'download':
-        try {
-          await Printing.sharePdf(
-              bytes: bytes, filename: '${item.name}.pdf');
-        } catch (e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('حدث خطأ: $e')),
-            );
-          }
-        }
+      case 'open':
+        PdfHelper.openPdfInNewTab(bytes, '${item.name}.pdf');
+        break;
+      case 'share':
+        PdfHelper.sharePdfBytes(bytes, '${item.name}.pdf');
         break;
       case 'delete':
         _confirmDelete(context, provider);

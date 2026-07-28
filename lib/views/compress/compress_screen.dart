@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdfx/pdfx.dart';
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import '../../providers/saved_provider.dart';
@@ -106,7 +105,7 @@ class _CompressScreenState extends State<CompressScreen> {
         LoadingDialog.hide(context);
       }
 
-      await Printing.sharePdf(bytes: compressedPdf, filename: fullFilename);
+      PdfHelper.openPdfInNewTab(compressedPdf, fullFilename);
 
       if (mounted) {
         _showResultDialog(_originalSize!, compressedPdf.length);
