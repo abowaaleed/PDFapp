@@ -3,6 +3,7 @@ import '../merge/merge_screen.dart';
 import '../compress/compress_screen.dart';
 import '../saved/saved_screen.dart';
 import '../editor/editor_screen.dart';
+import '../extract/extract_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -19,7 +20,7 @@ class HomeScreen extends StatelessWidget {
             Text('PDF-sw411',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('v1.0.8',
+            Text('v1.0.9',
                 style: TextStyle(
                     fontSize: 10, fontWeight: FontWeight.normal)),
           ],
@@ -59,7 +60,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'الأداة الاحترافية لدمج وضغط ملفات PDF',
+                      'الأداة الاحترافية لدمج وضغط واستخراج نصوص PDF',
                       style: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const SizedBox(height: 28),
@@ -91,6 +92,16 @@ class HomeScreen extends StatelessWidget {
                       color: Colors.teal,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const SavedScreen())),
+                    ),
+                    const SizedBox(height: 14),
+                    _FeatureCard(
+                      title: 'تحويل PDF إلى نص',
+                      icon: Icons.text_snippet,
+                      description:
+                          'استخرج النص من ملفات PDF وصدّره كـ Word أو نص عادي',
+                      color: Colors.deepPurple,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const ExtractScreen())),
                     ),
                     const SizedBox(height: 14),
                     _FeatureCard(

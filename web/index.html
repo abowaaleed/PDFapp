@@ -50,5 +50,44 @@
       }
     });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <script>
+    window.PDFUtils = {
+      extractText: async function(data) {
+        var pdf, page, tc, text, texts, i;
+        try {
+          pdf = await pdfjsLib.getDocument({data: data}).promise;
+        } catch (e) {
+          return JSON.stringify({error: e.message || 'Failed to load PDF'});
+        }
+        texts = [];
+        for (i = 1; i <= pdf.numPages; i++) {
+          try {
+            page = await pdf.getPage(i);
+            tc = await page.getTextContent();
+            text = tc.items.map(function(item) { return item.str; }).join(' ');
+            texts.push(text);
+          } catch (e) {
+            texts.push('');
+          }
+        }
+        return JSON.stringify({pages: texts});
+      },
+
+      ocrImage: async function(blobUrl, lang) {
+        try {
+          var result = await Tesseract.recognize(blobUrl, lang || 'ara+eng');
+          return JSON.stringify({
+            text: result.data.text,
+            confidence: result.data.confidence || 0
+          });
+        } catch (e) {
+          return JSON.stringify({error: e.message || 'OCR failed'});
+        }
+      }
+    };
+  </script>
 </body>
 </html>
