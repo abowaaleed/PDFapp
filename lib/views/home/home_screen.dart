@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../merge/merge_screen.dart';
 import '../compress/compress_screen.dart';
 import '../saved/saved_screen.dart';
+import '../editor/editor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,7 +19,7 @@ class HomeScreen extends StatelessWidget {
             Text('PDF-sw411',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('v1.0.7',
+            Text('v1.0.8',
                 style: TextStyle(
                     fontSize: 10, fontWeight: FontWeight.normal)),
           ],
@@ -90,6 +91,16 @@ class HomeScreen extends StatelessWidget {
                       color: Colors.teal,
                       onTap: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const SavedScreen())),
+                    ),
+                    const SizedBox(height: 14),
+                    _FeatureCard(
+                      title: 'إضافة نصوص على الصور',
+                      icon: Icons.text_fields,
+                      description:
+                          'أضف نصوصاً احترافية على صورك ثم صدّرها كـ PDF',
+                      color: const Color(0xFFD4AF37),
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const EditorScreen())),
                     ),
                   ],
                 ),
