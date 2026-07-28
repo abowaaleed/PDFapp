@@ -25,10 +25,10 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<PdfProvider>(context);
-    final images = provider.images;
-    final originalSizeKb = images.fold(0.0, (sum, item) => sum + item.length) / 1024;
+    final items = provider.items;
+    final originalSizeKb = items.fold(0.0, (sum, item) => sum + item.bytes.length) / 1024;
     final quality = ( (_sliderValue * 1024) / (originalSizeKb * 1024) ).clamp(0.05, 1.0);
-    final estimatedSizeKb = PdfHelper.estimateSizeKb(images, quality);
+    final estimatedSizeKb = PdfHelper.estimateSizeKb(items, quality);
 
     return Scaffold(
       appBar: AppBar(
@@ -115,13 +115,13 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
   }
 
   Future<void> _exportPdf(BuildContext context, PdfProvider provider) async {
-    final imagesCount = provider.images.length;
+    final imagesCount = provider.items.length;
     LoadingDialog.show(context, 'Image to PDF');
     await Future.delayed(const Duration(milliseconds: 500));
 
     try {
       final pdfBytes = await PdfHelper.generatePdfWithTargetSize(
-        images: provider.images,
+        imageItems: provider.items,
         targetSizeKb: _sliderValue,
         onProgress: (current, total) {
           LoadingDialog.updateProgress(current, total, message: 'Image to PDF');

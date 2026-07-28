@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
+import '../../models/image_item.dart';
 import '../../providers/saved_provider.dart';
 import '../../utils/pdf_helper.dart';
 import '../../widgets/loading_overlay.dart';
@@ -81,8 +82,9 @@ class _CompressScreenState extends State<CompressScreen> {
       double totalImgSize = pageImages.fold(0.0, (sum, item) => sum + item.length);
       double quality = ((_targetSizeKb * 1024) / totalImgSize).clamp(0.05, 0.9);
 
+      final imageItems = pageImages.map((bytes) => ImageItem(bytes: bytes)).toList();
       final compressedPdf = await PdfHelper.generatePdf(
-        images: pageImages,
+        imageItems: imageItems,
         quality: quality,
         onProgress: (current, total) {
           LoadingDialog.updateProgress(

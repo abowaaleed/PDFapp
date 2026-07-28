@@ -1,38 +1,42 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../models/image_item.dart';
+import '../models/text_element.dart';
 
 class PdfProvider with ChangeNotifier {
-  List<Uint8List> _images = [];
+  List<ImageItem> _items = [];
   double _compressionQuality = 0.5;
-  double _targetSizeKb = 1000; // Default 1MB
+  double _targetSizeKb = 1000;
   bool _isProcessing = false;
 
-  List<Uint8List> get images => _images;
+  List<ImageItem> get items => _items;
+  bool get isProcessing => _isProcessing;
   double get compressionQuality => _compressionQuality;
   double get targetSizeKb => _targetSizeKb;
-  bool get isProcessing => _isProcessing;
+
+  List<Uint8List> get images => _items.map((e) => e.bytes).toList();
 
   void addImages(List<Uint8List> newImages) {
-    _images.addAll(newImages);
+    _items.addAll(newImages.map((b) => ImageItem(bytes: b)));
     notifyListeners();
   }
 
   void removeImage(int index) {
-    _images.removeAt(index);
+    _items.removeAt(index);
     notifyListeners();
   }
 
   void reorderImages(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
-    final Uint8List item = _images.removeAt(oldIndex);
-    _images.insert(newIndex, item);
+    if (oldIndex < newIndex) newIndex -= 1;
+    final item = _items.removeAt(oldIndex);
+    _items.insert(newIndex, item);
     notifyListeners();
   }
 
-  void updateAllImages(List<Uint8List> newImages) {
-    _images = newImages;
+  void updateTextElements(int index, List<TextElement> elements) {
+    _items[index].textElements
+      ..clear()
+      ..addAll(elements);
     notifyListeners();
   }
 
@@ -52,7 +56,7 @@ class PdfProvider with ChangeNotifier {
   }
 
   void clearImages() {
-    _images = [];
+    _items = [];
     notifyListeners();
   }
 }

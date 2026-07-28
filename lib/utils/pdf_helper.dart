@@ -1,8 +1,12 @@
 import 'dart:html' as html;
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:image/image.dart' as img;
+import '../../models/image_item.dart';
+import '../../models/text_element.dart';
 
 Uint8List _processImage(Map<String, dynamic> params) {
   final Uint8List bytes = params['bytes'] as Uint8List;
@@ -22,9 +26,90 @@ Uint8List _processImage(Map<String, dynamic> params) {
   return Uint8List.fromList(img.encodeJpg(processed, quality: quality));
 }
 
+Future<Uint8List> _renderTextOnImage(Map<String, dynamic> params) async {
+  final Uint8List imageBytes = params['bytes'] as Uint8List;
+  final List<dynamic> textsJson = params['textElements'] as List<dynamic>;
+
+  if (textsJson.isEmpty) return imageBytes;
+
+  final decoded = img.decodeImage(Uint8List.fromList(imageBytes));
+  if (decoded == null) return imageBytes;
+
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+
+  final imageWidth = decoded.width.toDouble();
+  final imageHeight = decoded.height.toDouble();
+
+  canvas.drawImage(
+    await _decodeUiImage(imageBytes),
+    Offset.zero,
+    Paint(),
+  );
+
+  for (final tj in textsJson) {
+    final el = TextElement.fromJson(Map<String, dynamic>.from(tj));
+    if (el.text.isEmpty) continue;
+
+    canvas.save();
+    canvas.translate(el.x + el.boxWidth / 2, el.y + el.boxHeight / 2);
+    canvas.rotate(el.rotation * 3.14159265 / 180);
+    canvas.translate(-el.boxWidth / 2, -el.boxHeight / 2);
+
+    if (el.backgroundColorHex != null) {
+      final bgPaint = Paint()
+        ..color = el.backgroundColor!.withOpacity(el.backgroundOpacity);
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, el.boxWidth, el.boxHeight),
+        bgPaint,
+      );
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: el.text,
+        style: TextStyle(
+          color: el.color.withOpacity(el.opacity),
+          fontSize: el.fontSize,
+          fontWeight: el.isBold ? FontWeight.bold : FontWeight.normal,
+          fontStyle: el.isItalic ? FontStyle.italic : FontStyle.normal,
+          decoration:
+              el.isUnderline ? TextDecoration.underline : TextDecoration.none,
+        ),
+      ),
+      textDirection: TextDirection.rtl,
+      textAlign: el.alignment,
+      maxLines: null,
+    );
+
+    textPainter.layout(maxWidth: el.boxWidth);
+    textPainter.paint(canvas, Offset.zero);
+
+    canvas.restore();
+  }
+
+  final picture = recorder.endRecording();
+  final renderedImage = await picture.toImage(
+    imageWidth.toInt(),
+    imageHeight.toInt(),
+  );
+
+  final byteData = await renderedImage.toByteData(
+    format: ui.ImageByteFormat.png,
+  );
+
+  return byteData!.buffer.asUint8List();
+}
+
+Future<ui.Image> _decodeUiImage(Uint8List bytes) async {
+  final codec = await ui.instantiateImageCodec(bytes);
+  final frame = await codec.getNextFrame();
+  return frame.image;
+}
+
 class PdfHelper {
   static Future<Uint8List> generatePdf({
-    required List<Uint8List> images,
+    required List<ImageItem> imageItems,
     required double quality,
     double resizeFactor = 1.0,
     void Function(int current, int total)? onProgress,
@@ -32,18 +117,20 @@ class PdfHelper {
     final pdf = pw.Document();
     final qualityInt = (quality * 100).toInt();
 
-    for (int i = 0; i < images.length; i++) {
+    for (int i = 0; i < imageItems.length; i++) {
+      final item = imageItems[i];
+
       Uint8List processedBytes;
       try {
         processedBytes = await compute(_processImage, {
-          'bytes': images[i],
+          'bytes': item.bytes,
           'quality': qualityInt,
           'resizeFactor': resizeFactor,
         });
       } catch (e) {
-        final decoded = img.decodeImage(images[i]);
+        final decoded = img.decodeImage(item.bytes);
         if (decoded == null) {
-          onProgress?.call(i + 1, images.length);
+          onProgress?.call(i + 1, imageItems.length);
           continue;
         }
         img.Image processed = decoded;
@@ -52,7 +139,17 @@ class PdfHelper {
           final newH = (decoded.height * resizeFactor).round().clamp(1, decoded.height);
           processed = img.copyResize(decoded, width: newW, height: newH);
         }
-        processedBytes = Uint8List.fromList(img.encodeJpg(processed, quality: qualityInt));
+        processedBytes =
+            Uint8List.fromList(img.encodeJpg(processed, quality: qualityInt));
+      }
+
+      if (item.hasTexts && processedBytes.isNotEmpty) {
+        try {
+          processedBytes = await compute(_renderTextOnImage, {
+            'bytes': processedBytes,
+            'textElements': item.textElements.map((e) => e.toJson()).toList(),
+          });
+        } catch (_) {}
       }
 
       if (processedBytes.isNotEmpty) {
@@ -70,7 +167,7 @@ class PdfHelper {
         );
       }
 
-      onProgress?.call(i + 1, images.length);
+      onProgress?.call(i + 1, imageItems.length);
       await Future.delayed(const Duration(milliseconds: 10));
     }
 
@@ -78,12 +175,12 @@ class PdfHelper {
   }
 
   static Future<Uint8List> generatePdfWithTargetSize({
-    required List<Uint8List> images,
+    required List<ImageItem> imageItems,
     required double targetSizeKb,
     void Function(int current, int total)? onProgress,
   }) async {
     final double originalSizeKb =
-        images.fold(0.0, (sum, item) => sum + item.length) / 1024;
+        imageItems.fold(0.0, (sum, item) => sum + item.bytes.length) / 1024;
     final double sizeRatio = targetSizeKb / originalSizeKb;
 
     double resizeFactor =
@@ -93,14 +190,14 @@ class PdfHelper {
     double high = 1.0;
     Uint8List bestPdf = Uint8List(0);
     const int maxIterations = 8;
-    final int totalSteps = maxIterations * images.length;
+    final int totalSteps = maxIterations * imageItems.length;
 
     for (int i = 0; i < maxIterations; i++) {
       await Future.delayed(const Duration(milliseconds: 50));
 
       double mid = (low + high) / 2;
       bestPdf = await generatePdf(
-        images: images,
+        imageItems: imageItems,
         quality: mid,
         resizeFactor: resizeFactor,
         onProgress: onProgress != null
@@ -120,12 +217,12 @@ class PdfHelper {
       resizeFactor *=
           (targetSizeKb / (bestPdf.length / 1024) * 0.9).clamp(0.3, 0.8);
       const int extra = 4;
-      final int extraSteps = extra * images.length;
+      final int extraSteps = extra * imageItems.length;
 
       for (int i = 0; i < extra; i++) {
         double mid = (low + high) / 2;
         bestPdf = await generatePdf(
-          images: images,
+          imageItems: imageItems,
           quality: mid,
           resizeFactor: resizeFactor,
           onProgress: onProgress != null
@@ -145,32 +242,22 @@ class PdfHelper {
     return bestPdf;
   }
 
-  static double estimateSizeKb(List<Uint8List> images, double quality) {
+  static double estimateSizeKb(List<ImageItem> imageItems, double quality) {
     double totalOriginalSize =
-        images.fold(0.0, (sum, item) => sum + item.length);
+        imageItems.fold(0.0, (sum, item) => sum + item.bytes.length);
     double estimatedSize = totalOriginalSize * (0.02 + (quality * 0.4));
     return estimatedSize / 1024;
   }
 
-  static void openPdfInNewTab(Uint8List bytes, String filename) {
-    final blob = html.Blob([bytes], 'application/pdf');
+  static void openPdfInNewTab(Uint8List pdfBytes, String filename) {
+    final blob = html.Blob([pdfBytes], 'application/pdf');
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.window.open(url, '_blank');
-    Future.delayed(const Duration(seconds: 30), () {
-      html.Url.revokeObjectUrl(url);
-    });
   }
 
-  static Future<void> sharePdfBytes(Uint8List bytes, String filename) async {
-    try {
-      final blob = html.Blob([bytes], 'application/pdf');
-      final file = html.File([blob], filename, {'type': 'application/pdf'});
-      await html.window.navigator.share({
-        'files': [file],
-        'title': filename,
-      });
-    } catch (_) {
-      openPdfInNewTab(bytes, filename);
-    }
+  static Future<void> sharePdfBytes(Uint8List pdfBytes, String filename) async {
+    final blob = html.Blob([pdfBytes], 'application/pdf');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.window.open(url, '_blank');
   }
 }
