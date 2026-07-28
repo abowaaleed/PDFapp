@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/pdf_provider.dart';
+import '../../providers/saved_provider.dart';
 import '../../utils/pdf_helper.dart';
 import '../../widgets/loading_overlay.dart';
 
@@ -129,11 +130,17 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
 
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Document' : _nameController.text;
       PdfHelper.downloadPdf(pdfBytes, '$filename.pdf');
-      
+
+      if (context.mounted) {
+        final savedProvider = Provider.of<SavedProvider>(context, listen: false);
+        await savedProvider.save(
+          '$filename.pdf',
+          pdfBytes,
+        );
+      }
+
       if (mounted) {
-        // نغلق نافذة التحميل أولاً
         LoadingDialog.hide(context);
-        // ثم نظهر رسالة النجاح
         _showSuccessDialog(imagesCount, pdfBytes.length);
       }
     } catch (e) {
@@ -157,6 +164,8 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
             Text('حجم الملف النهائي: ${(size / 1024).toStringAsFixed(1)} KB'),
             const SizedBox(height: 8),
             const Text('تم حفظ الملف بنجاح.', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('تم الحفظ في المحفوظات أيضاً', style: TextStyle(color: Colors.blue, fontSize: 12)),
           ],
         ),
         actions: [

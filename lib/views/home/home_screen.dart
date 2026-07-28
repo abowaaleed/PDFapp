@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import '../merge/merge_screen.dart';
 import '../compress/compress_screen.dart';
+import '../saved/saved_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final secondary = Theme.of(context).colorScheme.secondary;
+
     return Scaffold(
       appBar: AppBar(
         title: const Column(
           children: [
-            Text('PDF-sw411', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('v1.0.6', style: TextStyle(fontSize: 10, fontWeight: FontWeight.normal)),
+            Text('PDF-sw411',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            Text('v1.0.7',
+                style: TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.normal)),
           ],
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: primary,
         foregroundColor: Colors.white,
       ),
       body: Container(
@@ -25,59 +33,66 @@ class HomeScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Theme.of(context).colorScheme.primary.withValues(alpha: 0.05), Colors.white],
+            colors: [primary.withValues(alpha: 0.05), Colors.white],
           ),
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.picture_as_pdf, size: 100, color: Color(0xFF1A3A5F)),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'مرحباً بك في PDF-sw411',
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1A3A5F)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'الأداة الاحترافية لدمج وضغط ملفات PDF بسهولة',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 50),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FeatureCard(
-                          title: 'دمج صور إلى PDF',
-                          icon: Icons.auto_awesome_motion,
-                          description: 'اجمع صورك في مستند واحد مع تحكم كامل في الحجم',
-                          color: Theme.of(context).colorScheme.primary,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const MergeScreen()),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _FeatureCard(
-                          title: 'ضغط ملف PDF',
-                          icon: Icons.compress_rounded,
-                          description: 'قلل حجم ملفاتك مع الحفاظ على الجودة العالية',
-                          color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const CompressScreen()),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Icon(Icons.picture_as_pdf,
+                        size: 70, color: primary),
+                    const SizedBox(height: 14),
+                    Text(
+                      'مرحباً بك في PDF-sw411',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: primary),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'الأداة الاحترافية لدمج وضغط ملفات PDF',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 28),
+                    _FeatureCard(
+                      title: 'دمج صور إلى PDF',
+                      icon: Icons.auto_awesome_motion,
+                      description:
+                          'اجمع صورك في مستند واحد مع تحكم كامل في الحجم',
+                      color: primary,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MergeScreen())),
+                    ),
+                    const SizedBox(height: 14),
+                    _FeatureCard(
+                      title: 'ضغط ملف PDF',
+                      icon: Icons.compress_rounded,
+                      description:
+                          'قلل حجم ملفاتك مع الحفاظ على الجودة العالية',
+                      color: secondary,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const CompressScreen())),
+                    ),
+                    const SizedBox(height: 14),
+                    _FeatureCard(
+                      title: 'المحفوظات',
+                      icon: Icons.bookmark_border,
+                      description:
+                          'تصفّح وحمّل وشارك الملفات التي قمت بحفظها',
+                      color: Colors.teal,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const SavedScreen())),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -87,7 +102,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _FeatureCard extends StatelessWidget {
+class _FeatureCard extends StatefulWidget {
   final String title;
   final String description;
   final IconData icon;
@@ -103,44 +118,67 @@ class _FeatureCard extends StatelessWidget {
   });
 
   @override
+  State<_FeatureCard> createState() => _FeatureCardState();
+}
+
+class _FeatureCardState extends State<_FeatureCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Card(
-        elevation: 8,
-        shadowColor: Colors.black26,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(32.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: color.withValues(alpha: 0.1), width: 2),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Card(
+          elevation: 4,
+          shadowColor: Colors.black26,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border:
+                  Border.all(color: widget.color.withValues(alpha: 0.12), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: widget.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(widget.icon, size: 28, color: widget.color),
                 ),
-                child: Icon(icon, size: 56, color: color),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                description,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.title,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(widget.description,
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_back_ios_new,
+                    size: 16, color: Colors.grey[400]),
+              ],
+            ),
           ),
         ),
       ),

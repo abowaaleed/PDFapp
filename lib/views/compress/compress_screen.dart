@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:provider/provider.dart';
 import 'dart:typed_data';
+import '../../providers/saved_provider.dart';
 import '../../utils/pdf_helper.dart';
 import '../../widgets/loading_overlay.dart';
 
@@ -95,7 +97,15 @@ class _CompressScreenState extends State<CompressScreen> {
       final filename = _nameController.text.isEmpty ? 'PDF-sw411_Compressed' : _nameController.text;
       
       PdfHelper.downloadPdf(compressedPdf, '$filename.pdf');
-      
+
+      if (context.mounted) {
+        final savedProvider = Provider.of<SavedProvider>(context, listen: false);
+        await savedProvider.save(
+          '$filename.pdf',
+          compressedPdf,
+        );
+      }
+
       if (mounted) {
         LoadingDialog.hide(context);
         _showResultDialog(_originalSize!, compressedPdf.length);
@@ -120,7 +130,15 @@ class _CompressScreenState extends State<CompressScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('تمت العملية بنجاح'),
-        content: Text('نسبة الضغط المحققة: ${((original - compressed) / original * 100).toStringAsFixed(1)}%'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('نسبة الضغط المحققة: ${((original - compressed) / original * 100).toStringAsFixed(1)}%'),
+            const SizedBox(height: 4),
+            const Text('تم الحفظ في المحفوظات أيضاً', style: TextStyle(color: Colors.blue, fontSize: 12)),
+          ],
+        ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً'))],
       ),
     );

@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/pdf_provider.dart';
+import 'providers/saved_provider.dart';
 import 'views/home/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final savedProvider = SavedProvider();
+  await savedProvider.init();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PdfProvider()),
+        ChangeNotifierProvider.value(value: savedProvider),
       ],
       child: const PromitKamelApp(),
     ),
