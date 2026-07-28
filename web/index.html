@@ -55,8 +55,22 @@
 
   <script>
     window.PDFUtils = {
+      isArabic: function(s) {
+        return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s);
+      },
+      sortItemsInLine: function(items) {
+        if (items.length === 0) return '';
+        var hasArabic = items.some(function(it) { return PDFUtils.isArabic(it.str); });
+        items.sort(function(a, b) {
+          var dy = a.transform[5] - b.transform[5];
+          if (Math.abs(dy) > 2) return dy;
+          if (hasArabic) return b.transform[4] - a.transform[4];
+          return a.transform[4] - b.transform[4];
+        });
+        return items.map(function(it) { return it.str; }).join(' ');
+      },
       extractText: async function(data) {
-        var pdf, page, tc, text, texts, i;
+        var pdf, page, tc, text, texts, i, lines, items, j, item;
         try {
           pdf = await pdfjsLib.getDocument({data: data}).promise;
         } catch (e) {
@@ -67,7 +81,22 @@
           try {
             page = await pdf.getPage(i);
             tc = await page.getTextContent();
-            text = tc.items.map(function(item) { return item.str; }).join(' ');
+            items = tc.items;
+            lines = [];
+            for (j = 0; j < items.length; j++) {
+              item = items[j];
+              if (!item.str) continue;
+              var added = false;
+              for (var k = 0; k < lines.length; k++) {
+                if (Math.abs(lines[k][0].transform[5] - item.transform[5]) < 5) {
+                  lines[k].push(item);
+                  added = true;
+                  break;
+                }
+              }
+              if (!added) lines.push([item]);
+            }
+            text = lines.map(PDFUtils.sortItemsInLine).join('\n');
             texts.push(text);
           } catch (e) {
             texts.push('');
