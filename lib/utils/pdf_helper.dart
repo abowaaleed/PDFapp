@@ -10,7 +10,7 @@ import '../../models/text_element.dart';
 
 Uint8List _processImage(Map<String, dynamic> params) {
   final Uint8List bytes = params['bytes'] as Uint8List;
-  final int quality = params['quality'] as int;
+  final int quality = (params['quality'] as int).clamp(40, 100);
   final double resizeFactor = (params['resizeFactor'] as num).toDouble();
 
   final decoded = img.decodeImage(bytes);
@@ -115,7 +115,7 @@ class PdfHelper {
     void Function(int current, int total)? onProgress,
   }) async {
     final pdf = pw.Document();
-    final qualityInt = (quality * 100).toInt();
+    final qualityInt = (quality * 100).toInt().clamp(40, 100);
 
     for (int i = 0; i < imageItems.length; i++) {
       final item = imageItems[i];
@@ -140,7 +140,7 @@ class PdfHelper {
           processed = img.copyResize(decoded, width: newW, height: newH);
         }
         processedBytes =
-            Uint8List.fromList(img.encodeJpg(processed, quality: qualityInt));
+            Uint8List.fromList(img.encodeJpg(processed, quality: qualityInt.clamp(40, 100)));
       }
 
       if (item.hasTexts && processedBytes.isNotEmpty) {
@@ -183,18 +183,28 @@ class PdfHelper {
         imageItems.fold(0.0, (sum, item) => sum + item.bytes.length) / 1024;
     final double sizeRatio = targetSizeKb / originalSizeKb;
 
-    double resizeFactor =
-        sizeRatio >= 0.5 ? 1.0 : (sizeRatio * 2).clamp(0.05, 1.0);
+    if (sizeRatio >= 0.95) {
+      return generatePdf(
+        imageItems: imageItems,
+        quality: 0.92,
+        resizeFactor: 1.0,
+        onProgress: onProgress,
+      );
+    }
 
-    double low = 0.05;
-    double high = 1.0;
-    Uint8List bestPdf = Uint8List(0);
-    const int maxIterations = 8;
+    double resizeFactor = 1.0;
+    if (sizeRatio < 0.15) {
+      resizeFactor = (sizeRatio / 0.15).clamp(0.55, 1.0);
+    }
+
+    const int maxIterations = 10;
     final int totalSteps = maxIterations * imageItems.length;
+    double low = 0.30;
+    double high = 0.95;
+    Uint8List bestPdf = Uint8List(0);
 
     for (int i = 0; i < maxIterations; i++) {
-      await Future.delayed(const Duration(milliseconds: 50));
-
+      await Future.delayed(const Duration(milliseconds: 30));
       double mid = (low + high) / 2;
       bestPdf = await generatePdf(
         imageItems: imageItems,
@@ -205,21 +215,17 @@ class PdfHelper {
                 onProgress((i * total) + current, totalSteps)
             : null,
       );
-
-      if (bestPdf.length / 1024 > targetSizeKb) {
+      final double currentSizeKb = bestPdf.length / 1024;
+      if (currentSizeKb > targetSizeKb * 1.05) {
         high = mid;
       } else {
         low = mid;
       }
     }
 
-    if (bestPdf.length / 1024 > targetSizeKb * 1.3) {
-      resizeFactor *=
-          (targetSizeKb / (bestPdf.length / 1024) * 0.9).clamp(0.3, 0.8);
-      const int extra = 4;
-      final int extraSteps = extra * imageItems.length;
-
-      for (int i = 0; i < extra; i++) {
+    if (bestPdf.length / 1024 > targetSizeKb * 1.15 && resizeFactor > 0.55) {
+      resizeFactor = (resizeFactor * 0.85).clamp(0.55, 1.0);
+      for (int i = 0; i < 4; i++) {
         double mid = (low + high) / 2;
         bestPdf = await generatePdf(
           imageItems: imageItems,
@@ -228,10 +234,10 @@ class PdfHelper {
           onProgress: onProgress != null
               ? (current, total) => onProgress(
                   totalSteps + (i * total) + current,
-                  totalSteps + extraSteps)
+                  totalSteps + 4 * imageItems.length)
               : null,
         );
-        if (bestPdf.length / 1024 > targetSizeKb) {
+        if (bestPdf.length / 1024 > targetSizeKb * 1.05) {
           high = mid;
         } else {
           low = mid;
@@ -253,6 +259,18 @@ class PdfHelper {
     final blob = html.Blob([pdfBytes], 'application/pdf');
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.window.open(url, '_blank');
+  }
+
+  static void downloadPdf(Uint8List pdfBytes, String filename) {
+    final blob = html.Blob([pdfBytes], 'application/pdf');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', filename)
+      ..style.display = 'none';
+    html.document.body!.children.add(anchor);
+    anchor.click();
+    anchor.remove();
+    html.Url.revokeObjectUrl(url);
   }
 
   static Future<void> sharePdfBytes(Uint8List pdfBytes, String filename) async {

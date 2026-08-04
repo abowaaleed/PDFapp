@@ -21,6 +21,7 @@ dependencies:
   intl: ^0.20.2
   path: ^1.8.3
   pdfx: ^2.4.0
+  file_saver: ^0.2.1
   web: ^1.1.1
   docx_dart: ^1.2.0
   js: ^0.7.2

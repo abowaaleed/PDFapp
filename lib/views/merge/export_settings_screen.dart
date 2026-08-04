@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/pdf_provider.dart';
@@ -142,7 +143,7 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
       PdfHelper.openPdfInNewTab(pdfBytes, '$filename.pdf');
 
       if (mounted) {
-        _showSuccessDialog(imagesCount, pdfBytes.length);
+        _showSuccessDialog(imagesCount, pdfBytes.length, pdfBytes, '$filename.pdf');
       }
     } catch (e) {
       if (mounted) {
@@ -152,7 +153,7 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
     }
   }
 
-  void _showSuccessDialog(int count, int size) {
+  void _showSuccessDialog(int count, int size, Uint8List pdfBytes, String filename) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -164,13 +165,23 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
             Text('عدد الصور المدمجة: $count'),
             Text('حجم الملف النهائي: ${(size / 1024).toStringAsFixed(1)} KB'),
             const SizedBox(height: 8),
-            const Text('تم حفظ الملف بنجاح.', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text('تم الحفظ في المحفوظات أيضاً', style: TextStyle(color: Colors.blue, fontSize: 12)),
+            const Text('تم الحفظ في المحفوظات.', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً')),
+          TextButton(
+            onPressed: () {
+              PdfHelper.downloadPdf(pdfBytes, filename);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('جاري تحميل الملف على جهازك...')),
+              );
+            },
+            child: const Text('تحميل على الجهاز', style: TextStyle(color: Color(0xFF1A3A5F), fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('حسناً'),
+          ),
         ],
       ),
     );
