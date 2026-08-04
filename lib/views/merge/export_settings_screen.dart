@@ -169,14 +169,28 @@ class _ExportSettingsScreenState extends State<ExportSettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(
+          TextButton.icon(
+            onPressed: () async {
+              final shared = await PdfHelper.sharePdf(pdfBytes, filename);
+              if (!shared && context.mounted) {
+                PdfHelper.downloadPdf(pdfBytes, filename);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('جاري تحميل الملف...')),
+                );
+              }
+            },
+            icon: const Icon(Icons.share, size: 18),
+            label: const Text('مشاركة'),
+          ),
+          TextButton.icon(
             onPressed: () {
               PdfHelper.downloadPdf(pdfBytes, filename);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('جاري تحميل الملف على جهازك...')),
               );
             },
-            child: const Text('تحميل على الجهاز', style: TextStyle(color: Color(0xFF1A3A5F), fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('تحميل', style: TextStyle(color: Color(0xFF1A3A5F), fontWeight: FontWeight.bold)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),

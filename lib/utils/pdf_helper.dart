@@ -273,6 +273,20 @@ class PdfHelper {
     html.Url.revokeObjectUrl(url);
   }
 
+  static Future<bool> sharePdf(Uint8List pdfBytes, String filename) async {
+    try {
+      final blob = html.Blob([pdfBytes], 'application/pdf');
+      final file = html.File([blob], filename);
+      await html.window.navigator.share({
+        'files': [file],
+        'title': filename,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> sharePdfBytes(Uint8List pdfBytes, String filename) async {
     final blob = html.Blob([pdfBytes], 'application/pdf');
     final url = html.Url.createObjectUrlFromBlob(blob);
