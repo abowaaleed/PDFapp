@@ -1,6 +1,6 @@
 name: pdf_app
 description: A new Flutter project for merging images to PDF and compressing PDFs.
-version: 1.0.0+1
+version: 1.2.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

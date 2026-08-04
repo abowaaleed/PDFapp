@@ -5,6 +5,8 @@ import '../saved/saved_screen.dart';
 import '../editor/editor_screen.dart';
 import '../extract/extract_screen.dart';
 
+import '../merge_pdf/merge_pdf_screen.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -20,7 +22,7 @@ class HomeScreen extends StatelessWidget {
             Text('PDF-sw411',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('v1.1.0',
+            Text('v1.2.0',
                 style: TextStyle(
                     fontSize: 10, fontWeight: FontWeight.normal)),
           ],
@@ -64,6 +66,15 @@ class HomeScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const SizedBox(height: 28),
+                    _FeatureCard(
+                      title: 'دمج ملفات PDF',
+                      icon: Icons.merge,
+                      description: 'اجمع عدة ملفات PDF في ملف واحد بلمسة واحدة',
+                      color: Colors.blueAccent,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MergePdfsScreen())),
+                    ),
+                    const SizedBox(height: 14),
                     _FeatureCard(
                       title: 'دمج صور إلى PDF',
                       icon: Icons.auto_awesome_motion,
