@@ -42,6 +42,7 @@
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script>
     window.addEventListener('load', function() {
       if (window['pdfjs-dist/build/pdf']) {
@@ -105,6 +106,21 @@
         } catch (e) {
           return JSON.stringify({error: e.message || 'OCR failed'});
         }
+      }
+    };
+
+    window.PDFMerge = {
+      mergeFiles: async function(files) {
+        if (typeof PDFLib === 'undefined') {
+          throw new Error('pdf-lib is not loaded');
+        }
+        var merged = await PDFLib.PDFDocument.create();
+        for (var i = 0; i < files.length; i++) {
+          var src = await PDFLib.PDFDocument.load(files[i]);
+          var pages = await merged.copyPages(src, src.getPageIndices());
+          pages.forEach(function(page) { merged.addPage(page); });
+        }
+        return await merged.save();
       }
     };
   </script>
